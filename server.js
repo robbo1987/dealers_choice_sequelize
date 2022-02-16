@@ -4,6 +4,8 @@ const sequelize = new Sequelize(
 );
 const express = require("express");
 const app = express();
+const methodOverride = require("method-override");
+const { AsyncQueueError } = require("sequelize");
 const port = process.env.PORT || 3000;
 
 const Team = sequelize.define("team", {
@@ -32,9 +34,20 @@ Player.belongsTo(Team);
 Team.hasMany(Player);
 
 app.use(express.urlencoded({ extended: false }));
+app.use(methodOverride("remove"));
 
 app.get("/", (req, res) => {
   res.redirect("/players");
+});
+
+app.delete("players/:id", async (req, res, next) => {
+  try {
+    const player = await Player.findByPk(req.params.id);
+    await player.destroy();
+    res.redirect(`/teams/${player.teamId}`);
+  } catch {
+    next(ex);
+  }
 });
 
 app.post("/players", async (req, res, next) => {
@@ -127,6 +140,9 @@ app.get("/teams/:id", async (req, res, next) => {
         return `
       <div>
         ${player.name}
+        <form method='POST' action='/players/${player.id}?remove=delete'>
+          <button>DELETE</button>
+        </form>
       </div>
       `;
       })
