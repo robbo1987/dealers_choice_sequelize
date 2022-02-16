@@ -31,13 +31,32 @@ const Player = sequelize.define("player", {
 Player.belongsTo(Team);
 Team.hasMany(Player);
 
+app.use(express.urlencoded({ extended: false }));
+
 app.get("/", (req, res) => {
   res.redirect("/players");
 });
 
+app.post("/players", async (req, res, next) => {
+  try {
+    const player = await Player.create(req.body);
+    res.redirect(`/teams/${player.teamId}`);
+    res.send(req.body);
+  } catch (ex) {
+    next(ex);
+  }
+});
 app.get("/players", async (req, res, next) => {
   try {
     const players = await Player.findAll({ include: [Team] });
+    const teams = await Team.findAll();
+
+    const options = teams
+      .map((team) => {
+        return `<option value ='${team.id}'>${team.name}</option>`;
+      })
+      .join("");
+
     const html = players
       .map((player) => {
         return `<div>
@@ -66,7 +85,18 @@ app.get("/players", async (req, res, next) => {
         justify-content:space-around;
         border: black solid 2px;
         width: 75%;
-        margin-left:150px;
+        margin-left:150px;}
+
+      form{
+        
+        text-align:center;
+
+      }
+
+      input{
+
+        width:33%;
+      }
      
     </style>
     <head>
@@ -74,6 +104,11 @@ app.get("/players", async (req, res, next) => {
     </head> 
       <body>
         <h1> NEW YORK SPORTS PAGE </h1>
+        <form method= 'POST'>
+          <input name= 'name' placeholder= 'INSERT PLAYER NAME'/>
+          <select name='teamId'> ${options} </select>
+          <button> ADD PLAYER </button>
+        </form>
         ${html}
       </body>
   </html>
